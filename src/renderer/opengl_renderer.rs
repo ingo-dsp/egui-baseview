@@ -2,9 +2,17 @@ use baseview::Window;
 use egui_glow::Painter;
 use std::sync::Arc;
 
+use std::sync::Mutex;
+use egui::{Id, Rgba};
+use egui_glow::glow;
+use std::ops::Deref;
+use std::borrow::BorrowMut;
+
+
 pub struct Renderer {
     glow_context: Arc<egui_glow::glow::Context>,
     painter: Painter,
+    id_renderer: Id,
 }
 
 impl Renderer {
@@ -33,6 +41,7 @@ impl Renderer {
         Self {
             glow_context,
             painter,
+            id_renderer: Id::new("dspstudio-renderer"),
         }
     }
 
@@ -57,12 +66,28 @@ impl Renderer {
             context.make_current();
         }
 
+        // BEGIN MODIFIED
+        let gl = &self.glow_context;
+        let color = Rgba::from_gray(32. / 255.);
         unsafe {
             use egui_glow::glow::HasContext as _;
-            self.glow_context
-                .clear_color(bg_color.r(), bg_color.g(), bg_color.b(), bg_color.a());
-            self.glow_context.clear(egui_glow::glow::COLOR_BUFFER_BIT);
+            gl.disable(glow::FRAMEBUFFER_SRGB);
+            gl.disable(glow::SCISSOR_TEST);
+            gl.clear_color(color[0], color[1], color[2], color[3]);
+            gl.clear_depth_f32(1.0);
+            gl.clear(glow::COLOR_BUFFER_BIT | glow::DEPTH_BUFFER_BIT);
+            gl.enable(glow::FRAMEBUFFER_SRGB);
+
+            let additional_renderer: Option<Arc<Mutex<Box<(dyn Fn(&glow::Context) + Send + Sync)>>>> = egui_ctx.memory().data.get_temp(self.id_renderer);
+            if let Some(additional_renderer) = additional_renderer {
+                if let Ok(mut renderer) = additional_renderer.try_lock() {
+                    gl.disable(glow::FRAMEBUFFER_SRGB);
+                    renderer.borrow_mut()(self.glow_context.deref());
+                    gl.enable(glow::FRAMEBUFFER_SRGB);
+                }
+            }
         }
+        // END MODIFIED
 
         for (id, image_delta) in textures_delta.set {
             self.painter.set_texture(id, &image_delta);
