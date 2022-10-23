@@ -601,21 +601,21 @@ pub fn translate_virtual_key_code(key: keyboard_types::Code) -> Option<egui::Key
     })
 }
 
-fn is_cut_command(modifiers: egui::Modifiers, keycode: keyboard_types::Code) -> bool {
+pub fn is_cut_command(modifiers: egui::Modifiers, keycode: keyboard_types::Code) -> bool {
     (modifiers.command && keycode == keyboard_types::Code::KeyX)
         || (cfg!(target_os = "windows")
             && modifiers.shift
             && keycode == keyboard_types::Code::Delete)
 }
 
-fn is_copy_command(modifiers: egui::Modifiers, keycode: keyboard_types::Code) -> bool {
+pub fn is_copy_command(modifiers: egui::Modifiers, keycode: keyboard_types::Code) -> bool {
     (modifiers.command && keycode == keyboard_types::Code::KeyC)
         || (cfg!(target_os = "windows")
             && modifiers.ctrl
             && keycode == keyboard_types::Code::Insert)
 }
 
-fn is_paste_command(modifiers: egui::Modifiers, keycode: keyboard_types::Code) -> bool {
+pub fn is_paste_command(modifiers: egui::Modifiers, keycode: keyboard_types::Code) -> bool {
     (modifiers.command && keycode == keyboard_types::Code::KeyV)
         || (cfg!(target_os = "windows")
             && modifiers.shift
