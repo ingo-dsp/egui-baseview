@@ -21,6 +21,6 @@ opengl = ["egui_glow", "baseview/opengl"]
 egui = { git = "https://github.com/ingo-dsp/egui.git", branch="develop-ingo" }
 egui_glow = { git = "https://github.com/ingo-dsp/egui.git", branch="develop-ingo", optional = true }
 keyboard-types = { version = "0.6.1", default-features = false }
-baseview = { path = "C:\\Users\\Ingo\\git\\extern\\ingodsp-baseview" }
+baseview = { path = "/home/ingo/git/extern/ingodsp-baseview" }
 raw-window-handle = "0.4.2"
 copypasta = "0.8"
