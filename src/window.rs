@@ -1,8 +1,9 @@
 use baseview::{
     Event, EventStatus, Window, WindowHandle, WindowHandler, WindowOpenOptions, WindowScalePolicy,
+    MouseCursor,
 };
 use copypasta::ClipboardProvider;
-use egui::{pos2, vec2, Pos2, Rect, Rgba};
+use egui::{pos2, vec2, Pos2, Rect, Rgba, CursorIcon};
 use keyboard_types::Modifiers;
 use raw_window_handle::HasRawWindowHandle;
 use std::time::Instant;
@@ -335,7 +336,8 @@ where
                 }
             }
 
-            // TODO: Handle setting the cursor icon.
+            // set the cursor icon
+            window.set_mouse_cursor(translate_cursor_icon(platform_output.cursor_icon));
 
             if self.close_requested {
                 window.close();
@@ -620,4 +622,45 @@ pub fn is_paste_command(modifiers: egui::Modifiers, keycode: keyboard_types::Cod
         || (cfg!(target_os = "windows")
             && modifiers.shift
             && keycode == keyboard_types::Code::Insert)
+}
+
+
+fn translate_cursor_icon(icon: CursorIcon) -> MouseCursor {
+    match icon {
+        CursorIcon::Default => MouseCursor::Default,
+        CursorIcon::None => MouseCursor::Hidden,
+        CursorIcon::ContextMenu => MouseCursor::Default,
+        CursorIcon::Help=> MouseCursor::Help,
+        CursorIcon::PointingHand => MouseCursor::Hand,
+        CursorIcon::Progress=> MouseCursor::PtrWorking,
+        CursorIcon::Wait => MouseCursor::Working,
+        CursorIcon::Cell => MouseCursor::Cell,
+        CursorIcon::Crosshair => MouseCursor::Crosshair,
+        CursorIcon::Text => MouseCursor::Text,
+        CursorIcon::VerticalText => MouseCursor::VerticalText,
+        CursorIcon::Alias => MouseCursor::Alias,
+        CursorIcon::Copy => MouseCursor::Copy,
+        CursorIcon::Move => MouseCursor::Move,
+        CursorIcon::NoDrop => MouseCursor::PtrNotAllowed,
+        CursorIcon::NotAllowed => MouseCursor::NotAllowed,
+        CursorIcon::Grab => MouseCursor::Hand,
+        CursorIcon::Grabbing => MouseCursor::HandGrabbing,
+        CursorIcon::AllScroll => MouseCursor::AllScroll,
+        CursorIcon::ResizeHorizontal => MouseCursor::EwResize,
+        CursorIcon::ResizeNeSw => MouseCursor::NeswResize,
+        CursorIcon::ResizeNwSe => MouseCursor::NwseResize,
+        CursorIcon::ResizeVertical => MouseCursor::NsResize,
+        CursorIcon::ResizeEast => MouseCursor::EResize,
+        CursorIcon::ResizeSouthEast => MouseCursor::SeResize,
+        CursorIcon::ResizeSouth => MouseCursor::SResize,
+        CursorIcon::ResizeSouthWest => MouseCursor::SwResize,
+        CursorIcon::ResizeWest => MouseCursor::WResize,
+        CursorIcon::ResizeNorthWest => MouseCursor::NwResize,
+        CursorIcon::ResizeNorth => MouseCursor::NResize,
+        CursorIcon::ResizeNorthEast => MouseCursor::NeResize,
+        CursorIcon::ResizeColumn => MouseCursor::ColResize,
+        CursorIcon::ResizeRow => MouseCursor::RowResize,
+        CursorIcon::ZoomIn => MouseCursor::ZoomIn,
+        CursorIcon::ZoomOut => MouseCursor::ZoomOut,
+    }
 }
