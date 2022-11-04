@@ -18,8 +18,8 @@ default = ["opengl"]
 opengl = ["egui_glow", "baseview/opengl"]
 
 [dependencies]
-egui = { git = "https://github.com/ingo-dsp/egui.git", branch="develop-ingo" }
-egui_glow = { git = "https://github.com/ingo-dsp/egui.git", branch="develop-ingo", optional = true }
+egui = { path = "/home/ingo/git/extern/ingodsp-egui/crates/egui" }
+egui_glow = { path = "/home/ingo/git/extern/ingodsp-egui/crates/egui_glow", optional = true }
 keyboard-types = { version = "0.6.1", default-features = false }
 baseview = { path = "/home/ingo/git/extern/ingodsp-baseview" }
 raw-window-handle = "0.4.2"
