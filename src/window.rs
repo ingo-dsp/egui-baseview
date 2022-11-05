@@ -440,70 +440,8 @@ where
                 _ => {}
             },
             baseview::Event::Keyboard(event) => {
-                use keyboard_types::Code;
-
-                let pressed = event.state == keyboard_types::KeyState::Down;
-
-                match event.code {
-                    Code::ShiftLeft | Code::ShiftRight => self.egui_input.modifiers.shift = pressed,
-                    Code::ControlLeft | Code::ControlRight => {
-                        self.egui_input.modifiers.ctrl = pressed;
-
-                        #[cfg(not(target_os = "macos"))]
-                        {
-                            self.egui_input.modifiers.command = pressed;
-                        }
-                    }
-                    Code::AltLeft | Code::AltRight => self.egui_input.modifiers.alt = pressed,
-                    Code::MetaLeft | Code::MetaRight => {
-                        #[cfg(target_os = "macos")]
-                        {
-                            self.egui_input.modifiers.mac_cmd = pressed;
-                            self.egui_input.modifiers.command = pressed;
-                        }
-                        () // prevent `rustfmt` from breaking this
-                    }
-                    _ => (),
-                }
-
-                if let Some(key) = translate_virtual_key_code(event.code) {
-                    self.egui_input.events.push(egui::Event::Key {
-                        key,
-                        pressed,
-                        modifiers: self.egui_input.modifiers,
-                    });
-                }
-
-                if pressed {
-                    // VirtualKeyCode::Paste etc in winit are broken/untrustworthy,
-                    // so we detect these things manually:
-                    if is_cut_command(self.egui_input.modifiers, event.code) {
-                        self.egui_input.events.push(egui::Event::Cut);
-                    } else if is_copy_command(self.egui_input.modifiers, event.code) {
-                        self.egui_input.events.push(egui::Event::Copy);
-                    } else if is_paste_command(self.egui_input.modifiers, event.code) {
-                        if let Some(clipboard_ctx) = &mut self.clipboard_ctx {
-                            if let Ok(contents) = clipboard_ctx.get_contents() {
-                                self.egui_input.events.push(egui::Event::Paste(contents));
-                            }
-                            if let Ok(data) = clipboard_ctx.get_mime_contents("application/dspstudio") {
-                                self.egui_input.events.push(
-                                    egui::Event::PasteMime(ClipboardData {
-                                        data,
-                                        mime: ClipboardMime::Specific("application/dspstudio".to_string())
-                                    })
-                                );
-                            }
-                        }
-                    } else if let keyboard_types::Key::Character(written) = &event.key {
-                        if !self.egui_input.modifiers.ctrl && !self.egui_input.modifiers.command {
-                            self.egui_input
-                                .events
-                                .push(egui::Event::Text(written.clone()));
-                            self.egui_ctx.wants_keyboard_input();
-                        }
-                    }
-                }
+                EguiKeyboardInput::from_keyboard_event(&event, self.clipboard_ctx.as_mut())
+                    .apply_on_raw_input(&mut self.egui_input);
             }
             baseview::Event::Window(event) => match event {
                 baseview::WindowEvent::Resized(window_info) => {
@@ -536,6 +474,102 @@ where
         }
 
         EventStatus::Captured
+    }
+}
+
+pub struct EguiKeyboardInput {
+    events: Vec<egui::Event>,
+    modifiers: egui::Modifiers,
+}
+impl EguiKeyboardInput {
+    pub fn from_keyboard_event(event: &keyboard_types::KeyboardEvent, clipboard_ctx: Option<&mut copypasta::ClipboardContext>) -> EguiKeyboardInput {
+        let mut events = vec![];
+        let mut modifiers = translate_modifiers(&event.modifiers);
+
+        use keyboard_types::Code;
+
+        let pressed = event.state == keyboard_types::KeyState::Down;
+
+        match event.code {
+            Code::ShiftLeft | Code::ShiftRight => modifiers.shift = pressed,
+            Code::ControlLeft | Code::ControlRight => {
+                modifiers.ctrl = pressed;
+
+                #[cfg(not(target_os = "macos"))]
+                {
+                    modifiers.command = pressed;
+                }
+            }
+            Code::AltLeft | Code::AltRight => modifiers.alt = pressed,
+            Code::MetaLeft | Code::MetaRight => {
+                #[cfg(target_os = "macos")]
+                {
+                    modifiers.mac_cmd = pressed;
+                    modifiers.command = pressed;
+                }
+                () // prevent `rustfmt` from breaking this
+            }
+            _ => (),
+        }
+
+        if let Some(key) = translate_virtual_key_code(event.code) {
+            events.push(egui::Event::Key { key, pressed, modifiers });
+        }
+
+        if pressed {
+            // VirtualKeyCode::Paste etc in winit are broken/untrustworthy,
+            // so we detect these things manually:
+            if is_cut_command(modifiers, event.code) {
+                events.push(egui::Event::Cut);
+            } else if is_copy_command(modifiers, event.code) {
+                events.push(egui::Event::Copy);
+            } else if is_paste_command(modifiers, event.code) {
+                if let Some(clipboard_ctx) = clipboard_ctx {
+                    if let Ok(contents) = clipboard_ctx.get_contents() {
+                        events.push(egui::Event::Paste(contents));
+                    }
+                    if let Ok(data) = clipboard_ctx.get_mime_contents("application/dspstudio") {
+                        events.push(
+                            egui::Event::PasteMime(ClipboardData {
+                                data,
+                                mime: ClipboardMime::Specific("application/dspstudio".to_string())
+                            })
+                        );
+                    }
+                }
+            } else if let keyboard_types::Key::Character(written) = &event.key {
+                if !modifiers.ctrl && !modifiers.command {
+                    events.push(egui::Event::Text(written.clone()));
+                }
+            }
+        }
+        EguiKeyboardInput {
+            events,
+            modifiers
+        }
+    }
+
+    pub fn apply_on_input(self, input_mut: &mut egui::InputState) {
+        for event in self.events {
+            if let egui::Event::Key { key, pressed, .. } = &event {
+                if *pressed {
+                    input_mut.keys_down.insert(*key);
+                } else {
+                    input_mut.keys_down.remove(key);
+                }
+            }
+            input_mut.raw.events.push(event.clone());
+            input_mut.events.push(event);
+        }
+        input_mut.raw.modifiers = self.modifiers;
+        input_mut.modifiers = self.modifiers;
+    }
+
+    pub fn apply_on_raw_input(self, raw_input_mut: &mut egui::RawInput) {
+        for event in self.events {
+            raw_input_mut.events.push(event.clone());
+        }
+        raw_input_mut.modifiers = self.modifiers;
     }
 }
 
@@ -673,5 +707,16 @@ fn translate_cursor_icon(icon: CursorIcon) -> MouseCursor {
         CursorIcon::ResizeRow => MouseCursor::RowResize,
         CursorIcon::ZoomIn => MouseCursor::ZoomIn,
         CursorIcon::ZoomOut => MouseCursor::ZoomOut,
+    }
+}
+
+
+pub fn translate_modifiers(modifiers: &keyboard_types::Modifiers) -> egui::Modifiers {
+    egui::Modifiers {
+        alt: modifiers.contains(keyboard_types::Modifiers::ALT),
+        command: modifiers.contains(keyboard_types::Modifiers::META) || (!cfg!(target_os = "macos") && modifiers.contains(keyboard_types::Modifiers::CONTROL)),
+        ctrl: modifiers.contains(keyboard_types::Modifiers::CONTROL) || (!cfg!(target_os = "macos") && modifiers.contains(keyboard_types::Modifiers::META)),
+        mac_cmd: cfg!(target_os = "macos") && modifiers.contains(keyboard_types::Modifiers::META),
+        shift: modifiers.contains(keyboard_types::Modifiers::SHIFT),
     }
 }

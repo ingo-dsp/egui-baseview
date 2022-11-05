@@ -1,5 +1,5 @@
 mod renderer;
-mod window;
+pub mod window;
 
 pub use window::{EguiWindow, Queue};
 pub use window::{translate_virtual_key_code};
