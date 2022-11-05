@@ -23,4 +23,4 @@ egui_glow = { path = "/home/ingo/git/extern/ingodsp-egui/crates/egui_glow", opti
 keyboard-types = { version = "0.6.1", default-features = false }
 baseview = { path = "/home/ingo/git/extern/ingodsp-baseview" }
 raw-window-handle = "0.4.2"
-copypasta = { git = "https://github.com/ingo-dsp/copypasta.git", branch = "develop-ingo" }
+copypasta = { path = "/home/ingo/git/extern/ingodsp-copypasta" }
