@@ -23,4 +23,4 @@ egui_glow = { git = "https://github.com/ingo-dsp/egui.git", branch="develop-ingo
 keyboard-types = { version = "0.6.1", default-features = false }
 baseview = { git = "https://github.com/ingo-dsp/baseview.git", branch = "develop-ingo" }
 raw-window-handle = "0.4.2"
-copypasta = "0.8"
+copypasta = { git = "https://github.com/ingo-dsp/copypasta.git", branch = "develop-ingo" }
