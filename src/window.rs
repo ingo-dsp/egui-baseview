@@ -3,7 +3,7 @@ use baseview::{
     MouseCursor,
 };
 use copypasta::ClipboardProvider;
-use egui::{pos2, vec2, Pos2, Rect, Rgba, CursorIcon};
+use egui::{pos2, vec2, Pos2, Rect, Rgba, CursorIcon, ClipboardMime, ClipboardData};
 use keyboard_types::Modifiers;
 use raw_window_handle::HasRawWindowHandle;
 use std::time::Instant;
@@ -336,6 +336,14 @@ where
                 }
             }
 
+            if let Some(egui::ClipboardData { data, mime: ClipboardMime::Specific(mime)}) = platform_output.copied_data {
+                if let Some(clipboard_ctx) = &mut self.clipboard_ctx {
+                    if let Err(err) = clipboard_ctx.set_mime_contents(data, &mime) {
+                        eprintln!("Copy/Cut error: {}", err);
+                    }
+                }
+            }
+
             // set the cursor icon
             window.set_mouse_cursor(translate_cursor_icon(platform_output.cursor_icon));
 
@@ -475,13 +483,16 @@ where
                         self.egui_input.events.push(egui::Event::Copy);
                     } else if is_paste_command(self.egui_input.modifiers, event.code) {
                         if let Some(clipboard_ctx) = &mut self.clipboard_ctx {
-                            match clipboard_ctx.get_contents() {
-                                Ok(contents) => {
-                                    self.egui_input.events.push(egui::Event::Text(contents))
-                                }
-                                Err(err) => {
-                                    eprintln!("Paste error: {}", err);
-                                }
+                            if let Ok(contents) = clipboard_ctx.get_contents() {
+                                self.egui_input.events.push(egui::Event::Paste(contents));
+                            }
+                            if let Ok(data) = clipboard_ctx.get_mime_contents("application/dspstudio") {
+                                self.egui_input.events.push(
+                                    egui::Event::PasteMime(ClipboardData {
+                                        data,
+                                        mime: ClipboardMime::Specific("application/dspstudio".to_string())
+                                    })
+                                );
                             }
                         }
                     } else if let keyboard_types::Key::Character(written) = &event.key {
