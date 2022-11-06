@@ -82,6 +82,7 @@ where
     repaint_after: Option<Instant>,
     mouse_pos: Option<Pos2>,
     close_requested: bool,
+    last_cursor_icon: Option<CursorIcon>,
 }
 
 impl<State, U> EguiWindow<State, U>
@@ -169,6 +170,7 @@ where
             repaint_after: Some(Instant::now()),
             mouse_pos: None,
             close_requested,
+            last_cursor_icon: None,
         }
     }
 
@@ -345,7 +347,12 @@ where
             }
 
             // set the cursor icon
-            window.set_mouse_cursor(translate_cursor_icon(platform_output.cursor_icon));
+            if self.last_cursor_icon != Some(platform_output.cursor_icon) {
+                // CAUTION: Setting the same cursor icon every frame causes signifigant lag in MacOS 
+                //   -> so we only set the cursor if it changed.
+                self.last_cursor_icon = Some(platform_output.cursor_icon);
+                window.set_mouse_cursor(translate_cursor_icon(platform_output.cursor_icon));
+            }
 
             if self.close_requested {
                 window.close();
