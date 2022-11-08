@@ -595,7 +595,7 @@ pub fn translate_virtual_key_code(key: keyboard_types::Code) -> Option<egui::Key
         Code::Escape => Key::Escape,
         Code::Tab => Key::Tab,
         Code::Backspace => Key::Backspace,
-        Code::Enter => Key::Enter,
+        Code::Enter | Code::NumpadEnter => Key::Enter,
         Code::Space => Key::Space,
 
         Code::Insert => Key::Insert,
