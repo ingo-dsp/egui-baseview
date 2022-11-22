@@ -1,5 +1,5 @@
 use baseview::{
-    Event, EventStatus, Window, WindowHandle, WindowHandler, WindowOpenOptions, WindowScalePolicy,
+    Event, EventStatus, Window, WindowHandle, WindowHandler, WindowOpenOptions,
     MouseCursor,
 };
 use copypasta::ClipboardProvider;
@@ -37,23 +37,15 @@ impl<'a> Queue<'a> {
 }
 
 struct OpenSettings {
-    pub scale_policy: WindowScalePolicy,
-    pub logical_width: f64,
-    pub logical_height: f64,
+    pub physical_width: f64,
+    pub physical_height: f64,
 }
 
 impl OpenSettings {
     fn new(settings: &WindowOpenOptions) -> Self {
-        // WindowScalePolicy does not implement copy/clone.
-        let scale_policy = match &settings.scale {
-            WindowScalePolicy::SystemScaleFactor => WindowScalePolicy::SystemScaleFactor,
-            WindowScalePolicy::ScaleFactor(scale) => WindowScalePolicy::ScaleFactor(*scale),
-        };
-
         Self {
-            scale_policy,
-            logical_width: settings.size.width as f64,
-            logical_height: settings.size.height as f64,
+            physical_width: settings.size.width as f64,
+            physical_height: settings.size.height as f64,
         }
     }
 }
@@ -74,7 +66,6 @@ where
 
     renderer: Renderer,
     scale_factor: f32,
-    scale_policy: WindowScalePolicy,
     bg_color: Rgba,
     physical_width: u32,
     physical_height: u32,
@@ -102,23 +93,19 @@ where
         B: FnMut(&egui::Context, &mut Queue, &mut State),
         B: 'static + Send,
     {
-        // Assume scale for now until there is an event with a new one.
-        let scale = match open_settings.scale_policy {
-            WindowScalePolicy::ScaleFactor(scale) => scale,
-            WindowScalePolicy::SystemScaleFactor => 1.0,
-        } as f32;
-
         let egui_ctx = egui::Context::default();
+
+        let guessed_scale = 1.0; // This is a wild guess. After we received some message, we'll know better.
 
         let egui_input = egui::RawInput {
             screen_rect: Some(Rect::from_min_size(
                 Pos2::new(0f32, 0f32),
                 vec2(
-                    open_settings.logical_width as f32,
-                    open_settings.logical_height as f32,
+                    open_settings.physical_width as f32,
+                    open_settings.physical_height as f32,
                 ),
             )),
-            pixels_per_point: Some(scale),
+            pixels_per_point: Some(guessed_scale),
             modifiers: egui::Modifiers {
                 alt: false,
                 ctrl: false,
@@ -129,8 +116,8 @@ where
             ..Default::default()
         };
 
-        let physical_width = (open_settings.logical_width * scale as f64).round() as u32;
-        let physical_height = (open_settings.logical_height * scale as f64).round() as u32;
+        let physical_width = open_settings.physical_width.round() as u32;
+        let physical_height = open_settings.physical_height.round() as u32;
 
         let renderer = Renderer::new(window);
 
@@ -161,8 +148,7 @@ where
             clipboard_ctx,
 
             renderer,
-            scale_factor: scale,
-            scale_policy: open_settings.scale_policy,
+            scale_factor: guessed_scale,
             bg_color,
             physical_width,
             physical_height,
@@ -447,10 +433,7 @@ where
             }
             baseview::Event::Window(event) => match event {
                 baseview::WindowEvent::Resized(window_info) => {
-                    self.scale_factor = match self.scale_policy {
-                        WindowScalePolicy::ScaleFactor(scale) => scale,
-                        WindowScalePolicy::SystemScaleFactor => window_info.scale(),
-                    } as f32;
+                    self.scale_factor = window_info.scale() as f32;
 
                     let logical_size = (
                         (window_info.physical_size().width as f32 / self.scale_factor),
