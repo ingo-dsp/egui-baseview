@@ -68,15 +68,16 @@ impl Renderer {
 
         // BEGIN MODIFIED
         let gl = &self.glow_context;
-        let color = Rgba::from_srgba_unmultiplied(32, 32, 32, 255);
+        // NOTE: We need to clear in sRGB on MacOS, so for simplicity we do that for every platform.
+        let color = Rgba::from_srgba_premultiplied(32, 32, 32, 255); // This happens to be premultiplied already because alpha is 255.
         unsafe {
             use egui_glow::glow::HasContext as _;
-            gl.disable(glow::FRAMEBUFFER_SRGB);
+            gl.enable(glow::FRAMEBUFFER_SRGB);
             gl.disable(glow::SCISSOR_TEST);
             gl.clear_color(color[0], color[1], color[2], color[3]);
             gl.clear_depth_f32(1.0);
             gl.clear(glow::COLOR_BUFFER_BIT | glow::DEPTH_BUFFER_BIT);
-            gl.enable(glow::FRAMEBUFFER_SRGB);
+            gl.disable(glow::FRAMEBUFFER_SRGB);
 
             let additional_renderer: Option<Arc<Mutex<Box<(dyn Fn(&glow::Context) + Send + Sync)>>>> = egui_ctx.memory().data.get_temp(self.id_renderer);
             if let Some(additional_renderer) = additional_renderer {
