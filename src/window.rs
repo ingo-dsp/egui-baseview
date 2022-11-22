@@ -407,7 +407,7 @@ where
                 } => {
                     self.update_modifiers(modifiers);
 
-                    let mut delta = match scroll_delta {
+                    let delta = match scroll_delta {
                         baseview::ScrollDelta::Lines { x, y } => {
                             let points_per_scroll_line = 50.0; // Scroll speed decided by consensus: https://github.com/emilk/egui/issues/461
                             egui::vec2(*x, *y) * points_per_scroll_line
@@ -420,11 +420,6 @@ where
                             }
                         }
                     };
-                    if cfg!(target_os = "macos") {
-                        // This is still buggy in winit despite
-                        // https://github.com/rust-windowing/winit/issues/1695 being closed
-                        delta.x *= -1.0;
-                    }
 
                     if self.egui_input.modifiers.ctrl || self.egui_input.modifiers.command {
                         // Treat as zoom instead:
