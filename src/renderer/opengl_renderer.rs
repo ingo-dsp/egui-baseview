@@ -68,7 +68,7 @@ impl Renderer {
 
         // BEGIN MODIFIED
         let gl = &self.glow_context;
-        let color = Rgba::from_gray(32. / 255.);
+        let color = Rgba::from_srgba_unmultiplied(32, 32, 32, 255);
         unsafe {
             use egui_glow::glow::HasContext as _;
             gl.disable(glow::FRAMEBUFFER_SRGB);
